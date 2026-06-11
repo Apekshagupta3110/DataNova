@@ -1,0 +1,2094 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:;">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Datanova | Executive Decision Support</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        // Soft neutral corporate palette
+                        'slate': {
+                            50: '#f8fafc', 100: '#f1f5f9', 200: '#e2e8f0',
+                            300: '#cbd5e1', 400: '#94a3b8', 500: '#64748b',
+                            600: '#475569', 700: '#334155', 800: '#1e293b', 900: '#0f172a'
+                        },
+                        'accent': '#3b82f6',
+                        'accent-dark': '#2563eb',
+                        'risk-low': '#10b981',
+                        'risk-low-bg': '#d1fae5',
+                        'risk-medium': '#f59e0b',
+                        'risk-medium-bg': '#fef3c7',
+                        'risk-high': '#ef4444',
+                        'risk-high-bg': '#fee2e2',
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Google Fonts - Inter for professional look -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+        
+        /* Custom scrollbar - subtle */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        /* Smooth animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-10px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
+        .animate-slide-in { animation: slideIn 0.3s ease-out forwards; }
+        .animate-pulse-slow { animation: pulse 3s ease-in-out infinite; }
+        
+        /* Page transitions */
+        .page { display: none; opacity: 0; }
+        .page.active { display: block; animation: fadeIn 0.4s ease-out forwards; }
+        
+        /* Card hover effects */
+        .card-hover { transition: all 0.2s ease; }
+        .card-hover:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(0,0,0,0.08); }
+        
+        /* KPI Cards with gradient borders */
+        .kpi-card { 
+            position: relative; 
+            background: white; 
+            border-radius: 16px; 
+            overflow: hidden;
+        }
+        .kpi-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 4px;
+            background: var(--accent-color, #3b82f6);
+        }
+        
+        /* Table styles */
+        .data-table { border-collapse: separate; border-spacing: 0; }
+        .data-table th { 
+            background: #f8fafc; 
+            position: sticky; 
+            top: 0; 
+            z-index: 10;
+            font-weight: 600;
+        }
+        .data-table tr:hover td { background: #f8fafc; }
+        
+        /* Navigation */
+        .nav-link {
+            display: flex; align-items: center; gap: 12px;
+            padding: 12px 16px; color: #64748b;
+            border-radius: 12px; transition: all 0.2s; cursor: pointer;
+            font-weight: 500;
+        }
+        .nav-link:hover { background: #f1f5f9; color: #1e293b; }
+        .nav-link.active { background: #3b82f6; color: white; }
+        
+        /* Chart tooltip */
+        .chart-tooltip {
+            position: absolute; background: white; padding: 16px;
+            border-radius: 12px; box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+            font-size: 13px; pointer-events: none; z-index: 100;
+            border: 1px solid #e2e8f0; min-width: 220px;
+        }
+        
+        /* Priority badge */
+        .priority-badge {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 32px; height: 32px; border-radius: 50%; font-weight: 700; font-size: 13px;
+        }
+        
+        /* Risk indicator dot */
+        .risk-dot {
+            width: 10px; height: 10px; border-radius: 50%;
+            display: inline-block; margin-right: 6px;
+        }
+        .risk-dot.low { background: #10b981; }
+        .risk-dot.medium { background: #f59e0b; }
+        .risk-dot.high { background: #ef4444; }
+        
+        /* Responsive sidebar */
+        @media (max-width: 1024px) {
+            .sidebar-nav { 
+                width: 72px !important; 
+                padding: 16px 8px !important;
+            }
+            .sidebar-nav .nav-text,
+            .sidebar-nav .brand-text,
+            .sidebar-nav .disclaimer-box { display: none; }
+            .sidebar-nav .nav-link { justify-content: center; padding: 12px; }
+            .main-content { margin-left: 72px !important; }
+        }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen">
+    
+    <!-- ============================================================
+         TOP HEADER BAR
+         ============================================================ -->
+    <header class="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between fixed top-0 left-0 right-0 z-50 shadow-sm">
+        <div class="flex items-center gap-4">
+            <div class="w-10 h-10 bg-gradient-to-br from-accent to-accent-dark rounded-xl flex items-center justify-center shadow-lg shadow-accent/20">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"/>
+                </svg>
+            </div>
+            <div>
+                <h1 class="font-bold text-slate-900 text-lg">Datanova</h1>
+                <p class="text-xs text-slate-500">Executive Decision Support System</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-6">
+            <!-- Privacy Notice Badge -->
+            <div class="flex items-center gap-2 px-3 py-1.5 bg-green-50 text-green-700 rounded-full text-sm font-medium">
+                <svg class="w-4 h-4 animate-pulse-slow" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                </svg>
+                <span>All employee data is anonymized</span>
+            </div>
+            <!-- User Profile -->
+            <div class="flex items-center gap-3 pl-6 border-l border-slate-200">
+                <div class="w-9 h-9 bg-slate-100 rounded-full flex items-center justify-center text-sm font-semibold text-slate-600">
+                    HR
+                </div>
+                <div class="text-sm">
+                    <p class="font-medium text-slate-900">HR Executive</p>
+                    <p class="text-xs text-slate-500">Strategic View</p>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- ============================================================
+         MAIN LAYOUT
+         ============================================================ -->
+    <div class="flex pt-16">
+        
+        <!-- ============================================================
+             SIDEBAR NAVIGATION
+             ============================================================ -->
+        <aside class="sidebar-nav w-64 bg-white border-r border-slate-200 fixed h-[calc(100vh-64px)] top-16 left-0 p-5 flex flex-col">
+            <nav class="space-y-2 flex-1">
+                <p class="text-xs text-slate-400 uppercase tracking-wider mb-4 px-3 font-semibold nav-text">Navigation</p>
+                
+                <a class="nav-link active" data-page="overview">
+                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
+                    </svg>
+                    <span class="nav-text">Overview</span>
+                </a>
+                
+                <a class="nav-link" data-page="ninebox">
+                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"/>
+                    </svg>
+                    <span class="nav-text">9-Box Grid</span>
+                </a>
+                
+                <a class="nav-link" data-page="attrition-cost">
+                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <span class="nav-text">Attrition Cost</span>
+                </a>
+                
+                <a class="nav-link" data-page="retention">
+                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/>
+                    </svg>
+                    <span class="nav-text">Retention Priority</span>
+                </a>
+                
+                <a class="nav-link" data-page="actionhub">
+                    <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+                    </svg>
+                    <span class="nav-text">Action Hub</span>
+                    <span class="ml-auto bg-red-500 text-white text-xs px-2 py-0.5 rounded-full nav-text">AI</span>
+                </a>
+            </nav>
+            
+            <!-- Ethical Disclaimer -->
+            <div class="disclaimer-box mt-auto">
+                <div class="bg-slate-50 rounded-xl p-4 border border-slate-200">
+                    <div class="flex items-start gap-3">
+                        <svg class="w-5 h-5 text-slate-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <div>
+                            <p class="text-xs font-semibold text-slate-700 mb-1">Ethical Notice</p>
+                            <p class="text-xs text-slate-500 leading-relaxed">
+                                Risk scoring is based on work-related metrics only. No personal or protected characteristics are used in calculations.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- ============================================================
+             MAIN CONTENT AREA
+             ============================================================ -->
+        <main class="main-content flex-1 ml-64 p-8 min-h-[calc(100vh-64px)]">
+            
+            <!-- ========== OVERVIEW PAGE ========== -->
+            <div class="page active" id="overview">
+                <div class="flex items-center justify-between mb-8">
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-900">Executive Overview</h2>
+                        <p class="text-slate-500 mt-1">Strategic workforce analytics and risk assessment</p>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <span class="text-sm text-slate-500">
+                            Last updated: <span id="lastUpdated" class="font-medium text-slate-700"></span>
+                        </span>
+                        <button onclick="refreshDashboard()" class="px-4 py-2 bg-accent text-white rounded-lg hover:bg-accent-dark transition flex items-center gap-2 text-sm font-medium shadow-lg shadow-accent/20">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                            </svg>
+                            Refresh Data
+                        </button>
+                    </div>
+                </div>
+
+                <!-- KPI Cards Row -->
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
+                    <!-- Total Workforce Card -->
+                    <div class="kpi-card p-6 shadow-sm card-hover" style="--accent-color: #3b82f6">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-sm font-medium text-slate-500">Total Workforce</span>
+                            <div class="w-11 h-11 bg-blue-50 rounded-xl flex items-center justify-center">
+                                <svg class="w-6 h-6 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                </svg>
+                            </div>
+                        </div>
+                        <p id="kpiTotalEmployees" class="text-3xl font-bold text-slate-900">--</p>
+                        <p class="text-sm text-slate-400 mt-1">Active employees</p>
+                    </div>
+                    
+                    <!-- High Risk Card -->
+                    <div class="kpi-card p-6 shadow-sm card-hover" style="--accent-color: #ef4444">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-sm font-medium text-slate-500">High Risk Employees</span>
+                            <div class="w-11 h-11 bg-red-50 rounded-xl flex items-center justify-center">
+                                <svg class="w-6 h-6 text-risk-high" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                                </svg>
+                            </div>
+                        </div>
+                        <p id="kpiHighRisk" class="text-3xl font-bold text-risk-high">--</p>
+                        <p class="text-sm text-slate-400 mt-1">Require attention</p>
+                    </div>
+                    
+                    <!-- Top Performers at Risk Card -->
+                    <div class="kpi-card p-6 shadow-sm card-hover" style="--accent-color: #f59e0b">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-sm font-medium text-slate-500">Stars at Risk</span>
+                            <div class="w-11 h-11 bg-amber-50 rounded-xl flex items-center justify-center">
+                                <svg class="w-6 h-6 text-risk-medium" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/>
+                                </svg>
+                            </div>
+                        </div>
+                        <p id="kpiTopAtRisk" class="text-3xl font-bold text-risk-medium">--</p>
+                        <p class="text-sm text-slate-400 mt-1">High performers at risk</p>
+                    </div>
+                    
+                    <!-- Estimated Risk Cost Card -->
+                    <div class="kpi-card p-6 shadow-sm card-hover" style="--accent-color: #10b981">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-sm font-medium text-slate-500">Estimated Risk Cost</span>
+                            <div class="w-11 h-11 bg-emerald-50 rounded-xl flex items-center justify-center">
+                                <svg class="w-6 h-6 text-risk-low" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                            </div>
+                        </div>
+                        <p id="kpiTotalRiskCost" class="text-3xl font-bold text-slate-900">--</p>
+                        <p class="text-sm text-slate-400 mt-1">Potential attrition impact</p>
+                    </div>
+                </div>
+
+                <!-- Charts Row -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+                    <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="font-semibold text-slate-900">Risk Distribution</h3>
+                            <span class="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded-full">By Risk Level</span>
+                        </div>
+                        <canvas id="overviewRiskChart" height="220"></canvas>
+                    </div>
+                    <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="font-semibold text-slate-900">9-Box Category Distribution</h3>
+                            <span class="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded-full">All Categories</span>
+                        </div>
+                        <canvas id="overviewCategoryChart" height="220"></canvas>
+                    </div>
+                </div>
+
+                <!-- Quick Insight Banner -->
+                <div class="bg-gradient-to-r from-accent to-blue-600 rounded-2xl p-6 text-white shadow-lg shadow-accent/20">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="font-semibold text-lg">Strategic Insight</h3>
+                                <p id="quickInsight" class="text-white/80 text-sm mt-0.5">Analyzing workforce data...</p>
+                            </div>
+                        </div>
+                        <button onclick="navigateTo('retention')" class="px-5 py-2.5 bg-white/20 hover:bg-white/30 rounded-xl transition text-sm font-medium flex items-center gap-2">
+                            View Retention Priority
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========== 9-BOX GRID PAGE ========== -->
+            <div class="page" id="ninebox">
+                <div class="flex items-center justify-between mb-8">
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-900">Datanova 9-Box Grid</h2>
+                        <p class="text-slate-500 mt-1">Performance vs Potential matrix with risk classification overlay</p>
+                    </div>
+                    <div class="flex items-center gap-6 bg-white px-4 py-2 rounded-xl border border-slate-200">
+                        <div class="flex items-center gap-2 text-sm">
+                            <span class="risk-dot low"></span>
+                            <span class="text-slate-600">Low Risk</span>
+                        </div>
+                        <div class="flex items-center gap-2 text-sm">
+                            <span class="risk-dot medium"></span>
+                            <span class="text-slate-600">Medium Risk</span>
+                        </div>
+                        <div class="flex items-center gap-2 text-sm">
+                            <span class="risk-dot high"></span>
+                            <span class="text-slate-600">High Risk</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 xl:grid-cols-4 gap-6">
+                    <!-- Main 9-Box Chart -->
+                    <div class="xl:col-span-3 bg-white rounded-2xl p-6 border border-slate-200 shadow-sm relative">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="font-semibold text-slate-900">Employee Distribution</h3>
+                            <span class="text-xs text-slate-500 bg-slate-100 px-3 py-1 rounded-full">Hover for details</span>
+                        </div>
+                        
+                        <!-- Axis Labels -->
+                        <div class="absolute top-1/2 left-2 transform -translate-y-1/2 -rotate-90 text-xs text-slate-400 font-medium tracking-wider whitespace-nowrap">
+                            POTENTIAL SCORE →
+                        </div>
+                        <div class="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-xs text-slate-400 font-medium tracking-wider">
+                            PERFORMANCE SCORE →
+                        </div>
+                        
+                        <div class="relative ml-6" style="height: 480px;">
+                            <canvas id="nineBoxChart"></canvas>
+                            <!-- Custom Tooltip -->
+                            <div id="chartTooltip" class="chart-tooltip hidden"></div>
+                        </div>
+                    </div>
+
+                    <!-- Category Breakdown Sidebar -->
+                    <div class="space-y-6">
+                        <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
+                            <h4 class="font-semibold text-slate-900 mb-4 text-sm">Category Counts</h4>
+                            <div id="categoryBreakdown" class="space-y-3">
+                                <!-- Populated by JavaScript -->
+                            </div>
+                        </div>
+                        
+                        <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
+                            <h4 class="font-semibold text-slate-900 mb-4 text-sm">High Risk by Category</h4>
+                            <canvas id="categoryRiskChart" height="220"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 9-Box Legend -->
+                <div class="mt-6 bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+                    <h4 class="font-semibold text-slate-900 mb-5">9-Box Grid Categories</h4>
+                    <div class="grid grid-cols-3 gap-4 text-sm">
+                        <!-- High Potential Row -->
+                        <div class="p-4 bg-emerald-50 rounded-xl border border-emerald-200">
+                            <p class="font-semibold text-emerald-800">High Perf / High Potential</p>
+                            <p class="text-emerald-600 text-xs mt-1">⭐ Stars - Future leaders, high investment priority</p>
+                        </div>
+                        <div class="p-4 bg-purple-50 rounded-xl border border-purple-200">
+                            <p class="font-semibold text-purple-800">Med Perf / High Potential</p>
+                            <p class="text-purple-600 text-xs mt-1">📈 Growth Employees - Invest in development</p>
+                        </div>
+                        <div class="p-4 bg-indigo-50 rounded-xl border border-indigo-200">
+                            <p class="font-semibold text-indigo-800">Low Perf / High Potential</p>
+                            <p class="text-indigo-600 text-xs mt-1">❓ Enigmas - Identify & remove barriers</p>
+                        </div>
+                        <!-- Medium Potential Row -->
+                        <div class="p-4 bg-blue-50 rounded-xl border border-blue-200">
+                            <p class="font-semibold text-blue-800">High Perf / Med Potential</p>
+                            <p class="text-blue-600 text-xs mt-1">💎 High Performers - Develop & retain</p>
+                        </div>
+                        <div class="p-4 bg-slate-100 rounded-xl border border-slate-300">
+                            <p class="font-semibold text-slate-800">Med Perf / Med Potential</p>
+                            <p class="text-slate-600 text-xs mt-1">⚙️ Core Players - Maintain engagement</p>
+                        </div>
+                        <div class="p-4 bg-orange-50 rounded-xl border border-orange-200">
+                            <p class="font-semibold text-orange-800">Low Perf / Med Potential</p>
+                            <p class="text-orange-600 text-xs mt-1">🔄 Dilemmas - Coach or transition</p>
+                        </div>
+                        <!-- Low Potential Row -->
+                        <div class="p-4 bg-cyan-50 rounded-xl border border-cyan-200">
+                            <p class="font-semibold text-cyan-800">High Perf / Low Potential</p>
+                            <p class="text-cyan-600 text-xs mt-1">🛡️ Trusted Experts - Retain expertise</p>
+                        </div>
+                        <div class="p-4 bg-amber-50 rounded-xl border border-amber-200">
+                            <p class="font-semibold text-amber-800">Med Perf / Low Potential</p>
+                            <p class="text-amber-600 text-xs mt-1">📋 Average Contributors - Set expectations</p>
+                        </div>
+                        <div class="p-4 bg-red-50 rounded-xl border border-red-200">
+                            <p class="font-semibold text-red-800">Low Perf / Low Potential</p>
+                            <p class="text-red-600 text-xs mt-1">⚠️ Underperformers - Address immediately</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========== ATTRITION COST PAGE ========== -->
+            <div class="page" id="attrition-cost">
+                <div class="mb-8">
+                    <h2 class="text-2xl font-bold text-slate-900">Attrition Cost Impact Calculator</h2>
+                    <p class="text-slate-500 mt-1">CFO View - Financial impact analysis of potential employee turnover</p>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                    <!-- Calculator Panel -->
+                    <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+                        <h3 class="font-semibold text-slate-900 mb-6 flex items-center gap-2">
+                            <svg class="w-5 h-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                            </svg>
+                            Cost Calculator
+                        </h3>
+
+                        <div class="space-y-6">
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-2">Employee Annual Salary ($)</label>
+                                <input type="number" id="calcSalary" value="75000" 
+                                    class="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-accent/20 focus:border-accent transition text-lg font-medium">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-2">
+                                    Replacement Cost Multiplier: <span id="multiplierValue" class="text-accent font-bold">1.5x</span>
+                                </label>
+                                <input type="range" id="calcMultiplier" min="1" max="3" step="0.1" value="1.5"
+                                    class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-accent">
+                                <div class="flex justify-between text-xs text-slate-400 mt-2">
+                                    <span>1.0x (Entry)</span>
+                                    <span>2.0x (Mid)</span>
+                                    <span>3.0x (Executive)</span>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 mb-2">
+                                    Productivity Loss Period: <span id="lossMonthsValue" class="text-accent font-bold">3 months</span>
+                                </label>
+                                <input type="range" id="calcLossMonths" min="1" max="12" value="3"
+                                    class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-accent">
+                                <div class="flex justify-between text-xs text-slate-400 mt-2">
+                                    <span>1 month</span>
+                                    <span>6 months</span>
+                                    <span>12 months</span>
+                                </div>
+                            </div>
+
+                            <button onclick="calculateAttritionCost()" 
+                                class="w-full py-3.5 bg-accent text-white font-semibold rounded-xl hover:bg-accent-dark transition shadow-lg shadow-accent/20 flex items-center justify-center gap-2">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                                </svg>
+                                Calculate Impact
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Results Panel -->
+                    <div class="lg:col-span-2 space-y-6">
+                        <!-- Cost Breakdown Cards -->
+                        <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+                            <h3 class="font-semibold text-slate-900 mb-6">Cost Breakdown</h3>
+                            <div class="grid grid-cols-3 gap-4">
+                                <div class="text-center p-5 bg-slate-50 rounded-xl">
+                                    <p class="text-sm text-slate-500 mb-2">Replacement Cost</p>
+                                    <p id="resultReplacementCost" class="text-2xl font-bold text-slate-900">$112,500</p>
+                                    <p class="text-xs text-slate-400 mt-1">Hiring & training</p>
+                                </div>
+                                <div class="text-center p-5 bg-slate-50 rounded-xl">
+                                    <p class="text-sm text-slate-500 mb-2">Productivity Loss</p>
+                                    <p id="resultProductivityLoss" class="text-2xl font-bold text-slate-900">$18,750</p>
+                                    <p class="text-xs text-slate-400 mt-1">Ramp-up period</p>
+                                </div>
+                                <div class="text-center p-5 bg-red-50 rounded-xl border-2 border-red-200">
+                                    <p class="text-sm text-risk-high font-medium mb-2">Total Impact</p>
+                                    <p id="resultTotalCost" class="text-2xl font-bold text-risk-high">$131,250</p>
+                                    <p class="text-xs text-risk-high/70 mt-1">Per employee</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Department Head Alert -->
+                        <div id="deptHeadAlert" class="bg-gradient-to-r from-risk-high to-red-600 rounded-2xl p-6 text-white shadow-lg">
+                            <div class="flex items-start gap-4">
+                                <div class="w-14 h-14 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                                    <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h4 class="font-semibold text-lg mb-1">⚠️ Critical Alert: Key Leader at Risk</h4>
+                                    <p id="deptHeadAlertText" class="text-white/90">If the Engineering Department Head resigns, estimated financial impact: <span class="font-bold">$187,500</span></p>
+                                    <p class="text-white/70 text-sm mt-2">This includes direct replacement costs plus downstream productivity losses.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Department Risk Cost Table -->
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="p-6 border-b border-slate-200">
+                        <h3 class="font-semibold text-slate-900">Department-Level Risk Cost Analysis</h3>
+                        <p class="text-sm text-slate-500 mt-1">Potential financial impact by department based on high-risk employee count</p>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="data-table w-full text-sm">
+                            <thead>
+                                <tr class="text-left">
+                                    <th class="px-6 py-4 font-semibold text-slate-600 border-b border-slate-200">Department</th>
+                                    <th class="px-6 py-4 font-semibold text-slate-600 border-b border-slate-200">High Risk Count</th>
+                                    <th class="px-6 py-4 font-semibold text-slate-600 border-b border-slate-200">Avg Salary</th>
+                                    <th class="px-6 py-4 font-semibold text-slate-600 border-b border-slate-200">Potential Risk Cost</th>
+                                    <th class="px-6 py-4 font-semibold text-slate-600 border-b border-slate-200">Dept Head at Risk?</th>
+                                </tr>
+                            </thead>
+                            <tbody id="deptCostTable">
+                                <!-- Populated by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========== RETENTION PRIORITY PAGE ========== -->
+            <div class="page" id="retention">
+                <div class="flex items-center justify-between mb-8">
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-900">Retention Priority List</h2>
+                        <p class="text-slate-500 mt-1">80/20 Rule - Protect employees who drive organizational value</p>
+                    </div>
+                    <div class="px-4 py-2 bg-accent/10 text-accent rounded-xl text-sm font-semibold">
+                        Top 20% Performers at Risk
+                    </div>
+                </div>
+
+                <!-- Priority Alert Banner -->
+                <div class="bg-gradient-to-r from-amber-500 to-orange-500 rounded-2xl p-6 text-white mb-8 shadow-lg">
+                    <div class="flex items-center gap-4">
+                        <div class="w-14 h-14 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="font-semibold text-lg">🎯 Focus on these employees to protect 80% of organizational value</h3>
+                            <p class="text-white/80 text-sm mt-1">These are your top performers showing medium to high burnout risk indicators based on work-related metrics.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Summary Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+                        <p class="text-sm text-slate-500 mb-2">Priority Employees</p>
+                        <p id="priorityCount" class="text-4xl font-bold text-slate-900">--</p>
+                        <p class="text-xs text-slate-400 mt-2">Requiring immediate intervention</p>
+                    </div>
+                    <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+                        <p class="text-sm text-slate-500 mb-2">Combined Value at Risk</p>
+                        <p id="priorityValueAtRisk" class="text-4xl font-bold text-risk-high">--</p>
+                        <p class="text-xs text-slate-400 mt-2">Total potential replacement cost</p>
+                    </div>
+                    <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+                        <p class="text-sm text-slate-500 mb-2">Avg Performance Score</p>
+                        <p id="priorityAvgPerf" class="text-4xl font-bold text-risk-low">--</p>
+                        <p class="text-xs text-slate-400 mt-2">Of priority employees</p>
+                    </div>
+                </div>
+
+                <!-- Priority Table -->
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="p-6 border-b border-slate-200">
+                        <h3 class="font-semibold text-slate-900">Retention Priority Ranking</h3>
+                        <p class="text-sm text-slate-500 mt-1">Sorted by: High Performance + High Risk first (most critical at top)</p>
+                    </div>
+                    <div class="overflow-x-auto max-h-[550px] overflow-y-auto">
+                        <table class="data-table w-full text-sm">
+                            <thead>
+                                <tr class="text-left">
+                                    <th class="px-6 py-4 font-semibold text-slate-600 border-b border-slate-200">Priority Rank</th>
+                                    <th class="px-6 py-4 font-semibold text-slate-600 border-b border-slate-200">Employee ID</th>
+                                    <th class="px-6 py-4 font-semibold text-slate-600 border-b border-slate-200">Department</th>
+                                    <th class="px-6 py-4 font-semibold text-slate-600 border-b border-slate-200">Performance Score</th>
+                                    <th class="px-6 py-4 font-semibold text-slate-600 border-b border-slate-200">Potential Score</th>
+                                    <th class="px-6 py-4 font-semibold text-slate-600 border-b border-slate-200">Risk Level</th>
+                                    <th class="px-6 py-4 font-semibold text-slate-600 border-b border-slate-200">9-Box Category</th>
+                                </tr>
+                            </thead>
+                            <tbody id="retentionTable">
+                                <!-- Populated by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========== ACTION HUB PAGE (AGENTIC AI) ========== -->
+            <div class="page" id="actionhub">
+                <div class="flex items-center justify-between mb-8">
+                    <div>
+                        <h2 class="text-2xl font-bold text-slate-900">Action Hub</h2>
+                        <p class="text-slate-500 mt-1">Datanova Command Center • AI-Powered Retention Strategy Execution</p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="flex items-center gap-2 text-sm text-emerald-600 font-medium">
+                            <span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse-slow"></span>
+                            AI Agent Active
+                        </span>
+                        <div class="px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-semibold shadow-lg shadow-blue-500/25">
+                            ⚡ Agentic AI Enabled
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI Status Banner -->
+                <div class="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-6 text-white mb-8 shadow-lg">
+                    <div class="flex items-center gap-4">
+                        <div class="w-14 h-14 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                            </svg>
+                        </div>
+                        <div class="flex-1">
+                            <h3 class="font-semibold text-lg">🎯 80/20 Retention Rule Active</h3>
+                            <p class="text-white/80 text-sm mt-1">Showing high-value employees at critical risk. These represent your most urgent retention priorities with AI-powered intervention recommendations.</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-white/60 text-xs">Total Risk Exposure</p>
+                            <p id="ahTotalRiskValue" class="text-2xl font-bold">$0</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Summary Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                    <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-sm font-medium text-slate-500">Priority Employees</span>
+                            <div class="w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center">
+                                <svg class="w-5 h-5 text-risk-high" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                                </svg>
+                            </div>
+                        </div>
+                        <p id="ahPriorityCount" class="text-3xl font-bold text-slate-900">--</p>
+                        <p class="text-xs text-slate-400 mt-1">High Risk + High Performers</p>
+                    </div>
+                    <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-sm font-medium text-slate-500">Pending Review</span>
+                            <div class="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center">
+                                <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                                </svg>
+                            </div>
+                        </div>
+                        <p id="ahPendingCount" class="text-3xl font-bold text-slate-900">--</p>
+                        <p class="text-xs text-slate-400 mt-1">Awaiting intervention</p>
+                    </div>
+                    <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-sm font-medium text-slate-500">In Progress</span>
+                            <div class="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
+                                <svg class="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+                                </svg>
+                            </div>
+                        </div>
+                        <p id="ahInProgressCount" class="text-3xl font-bold text-slate-900">--</p>
+                        <p class="text-xs text-slate-400 mt-1">Interventions active</p>
+                    </div>
+                    <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-sm font-medium text-slate-500">Retained</span>
+                            <div class="w-10 h-10 bg-emerald-50 rounded-lg flex items-center justify-center">
+                                <svg class="w-5 h-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                            </div>
+                        </div>
+                        <p id="ahRetainedCount" class="text-3xl font-bold text-emerald-600">--</p>
+                        <p class="text-xs text-slate-400 mt-1">Retention wins</p>
+                    </div>
+                </div>
+
+                <!-- Action Hub Table -->
+                <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="p-6 border-b border-slate-200">
+                        <h3 class="font-semibold text-slate-900">Retention Action Queue</h3>
+                        <p class="text-sm text-slate-500 mt-1">High-value employees requiring AI-powered retention interventions</p>
+                    </div>
+                    <div class="overflow-x-auto max-h-[500px] overflow-y-auto">
+                        <table class="data-table w-full text-sm">
+                            <thead>
+                                <tr class="text-left">
+                                    <th class="px-6 py-4 font-semibold text-slate-600 border-b border-slate-200">Employee ID</th>
+                                    <th class="px-6 py-4 font-semibold text-slate-600 border-b border-slate-200">Risk Profile</th>
+                                    <th class="px-6 py-4 font-semibold text-slate-600 border-b border-slate-200">Flight Risk</th>
+                                    <th class="px-6 py-4 font-semibold text-slate-600 border-b border-slate-200">Value Impact</th>
+                                    <th class="px-6 py-4 font-semibold text-slate-600 border-b border-slate-200">Workflow Status</th>
+                                    <th class="px-6 py-4 font-semibold text-slate-600 border-b border-slate-200">Agentic Action</th>
+                                    <th class="px-6 py-4 font-semibold text-slate-600 border-b border-slate-200 text-center">Collaborate</th>
+                                </tr>
+                            </thead>
+                            <tbody id="actionHubTable">
+                                <!-- Populated by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Footer -->
+                <div class="mt-6 flex items-center justify-between text-sm text-slate-500">
+                    <div class="flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                        </svg>
+                        <span>AI Agent powered by Datanova Intelligence Engine</span>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <span>Last sync: <span id="ahLastSync"></span></span>
+                        <span class="flex items-center gap-1">
+                            <span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse-slow"></span>
+                            Live
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- ============================================================
+         AI RETENTION AGENT MODAL
+         ============================================================ -->
+    <div id="aiAgentModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] hidden items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden animate-fade-in">
+            <!-- Modal Header -->
+            <div class="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-bold flex items-center gap-2">
+                                ✨ AI Retention Agent
+                            </h2>
+                            <p id="modalEmployeeId" class="text-white/80 text-sm">Personalized intervention for EMP-0000</p>
+                        </div>
+                    </div>
+                    <button onclick="closeAgentModal()" class="w-10 h-10 rounded-lg bg-white/20 hover:bg-white/30 flex items-center justify-center transition">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Modal Content -->
+            <div class="p-6 overflow-y-auto max-h-[60vh]">
+                <!-- Employee Risk Profile -->
+                <div class="bg-slate-50 rounded-xl p-4 mb-6 border border-slate-200">
+                    <h3 class="font-semibold text-slate-900 mb-3 flex items-center gap-2">
+                        <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                        </svg>
+                        Employee Risk Profile
+                    </h3>
+                    <div class="grid grid-cols-2 gap-4 text-sm">
+                        <div><span class="text-slate-500">Flight Risk:</span><span id="modalRiskScore" class="ml-2 font-bold text-risk-high">--</span></div>
+                        <div><span class="text-slate-500">Performance:</span><span id="modalPerformance" class="ml-2 font-bold text-risk-low">--</span></div>
+                        <div><span class="text-slate-500">Department:</span><span id="modalDepartment" class="ml-2 font-medium text-slate-700">--</span></div>
+                        <div><span class="text-slate-500">Overtime:</span><span id="modalOvertime" class="ml-2 font-bold text-amber-600">--</span></div>
+                    </div>
+                </div>
+
+                <!-- AI Recommendation -->
+                <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
+                    <div class="flex items-start gap-3">
+                        <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-blue-900 mb-1">AI Recommendation</h4>
+                            <p class="text-blue-700 text-sm">Based on this employee's profile, the AI agent recommends a <strong>multi-pronged intervention</strong> focusing on compensation alignment and workload optimization. Estimated retention probability increase: <strong class="text-blue-900">+34%</strong></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Strategy Selection -->
+                <div class="mb-6">
+                    <h3 class="font-semibold text-slate-900 mb-3">Select Intervention Strategies</h3>
+                    <div class="space-y-2" id="strategyOptions">
+                        <button type="button" onclick="toggleStrategy('salary')" data-strategy="salary" class="strategy-btn w-full flex items-center justify-between p-3 rounded-xl border-2 border-slate-200 hover:border-slate-300 bg-white transition">
+                            <div class="flex items-center gap-3">
+                                <div class="strategy-icon w-8 h-8 rounded-lg flex items-center justify-center bg-slate-100 text-slate-600">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                </div>
+                                <span class="strategy-label font-medium text-slate-700">Salary Adjustment</span>
+                            </div>
+                            <span class="text-xs px-2 py-1 rounded-full bg-emerald-100 text-emerald-700">High Impact</span>
+                        </button>
+                        <button type="button" onclick="toggleStrategy('promotion')" data-strategy="promotion" class="strategy-btn w-full flex items-center justify-between p-3 rounded-xl border-2 border-slate-200 hover:border-slate-300 bg-white transition">
+                            <div class="flex items-center gap-3">
+                                <div class="strategy-icon w-8 h-8 rounded-lg flex items-center justify-center bg-slate-100 text-slate-600">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+                                </div>
+                                <span class="strategy-label font-medium text-slate-700">Promotion Track</span>
+                            </div>
+                            <span class="text-xs px-2 py-1 rounded-full bg-emerald-100 text-emerald-700">High Impact</span>
+                        </button>
+                        <button type="button" onclick="toggleStrategy('workload')" data-strategy="workload" class="strategy-btn w-full flex items-center justify-between p-3 rounded-xl border-2 border-slate-200 hover:border-slate-300 bg-white transition">
+                            <div class="flex items-center gap-3">
+                                <div class="strategy-icon w-8 h-8 rounded-lg flex items-center justify-center bg-slate-100 text-slate-600">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                </div>
+                                <span class="strategy-label font-medium text-slate-700">Workload Reduction</span>
+                            </div>
+                            <span class="text-xs px-2 py-1 rounded-full bg-amber-100 text-amber-700">Medium Impact</span>
+                        </button>
+                        <button type="button" onclick="toggleStrategy('learning')" data-strategy="learning" class="strategy-btn w-full flex items-center justify-between p-3 rounded-xl border-2 border-slate-200 hover:border-slate-300 bg-white transition">
+                            <div class="flex items-center gap-3">
+                                <div class="strategy-icon w-8 h-8 rounded-lg flex items-center justify-center bg-slate-100 text-slate-600">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                                </div>
+                                <span class="strategy-label font-medium text-slate-700">Learning & Development</span>
+                            </div>
+                            <span class="text-xs px-2 py-1 rounded-full bg-amber-100 text-amber-700">Medium Impact</span>
+                        </button>
+                        <button type="button" onclick="toggleStrategy('recognition')" data-strategy="recognition" class="strategy-btn w-full flex items-center justify-between p-3 rounded-xl border-2 border-slate-200 hover:border-slate-300 bg-white transition">
+                            <div class="flex items-center gap-3">
+                                <div class="strategy-icon w-8 h-8 rounded-lg flex items-center justify-center bg-slate-100 text-slate-600">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"/></svg>
+                                </div>
+                                <span class="strategy-label font-medium text-slate-700">Recognition Program</span>
+                            </div>
+                            <span class="text-xs px-2 py-1 rounded-full bg-slate-100 text-slate-600">Low Impact</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Selection Summary -->
+                <div id="selectionSummary" class="bg-emerald-50 border border-emerald-200 rounded-xl p-4 hidden">
+                    <div class="flex items-center gap-2 text-emerald-800 font-medium mb-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        <span id="selectedCount">0</span> strategies selected
+                    </div>
+                    <p class="text-emerald-700 text-sm">The AI agent will generate a personalized retention plan and automatically schedule manager touchpoints.</p>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="border-t border-slate-200 p-4 bg-slate-50 flex items-center justify-between">
+                <button onclick="closeAgentModal()" class="px-4 py-2 text-slate-600 hover:text-slate-800 font-medium transition">Cancel</button>
+                <button id="activateAgentBtn" onclick="activateAgent()" disabled class="px-6 py-2.5 rounded-xl font-semibold flex items-center gap-2 bg-slate-200 text-slate-400 cursor-not-allowed transition">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                    Activate Agent
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================
+         JAVASCRIPT - CORE LOGIC & DATA
+         ============================================================ -->
+    <script>
+        // ================================================================
+        // CONFIGURATION - Score Thresholds for 9-Box Grid
+        // ================================================================
+        const CONFIG = {
+            // Performance thresholds: Low (1-3), Medium (4-7), High (8-10)
+            PERF_LOW_MAX: 3,
+            PERF_MED_MAX: 7,
+            // Potential thresholds: Low (1-3), Medium (4-7), High (8-10)
+            POT_LOW_MAX: 3,
+            POT_MED_MAX: 7,
+            // Risk score thresholds
+            RISK_MEDIUM_MIN: 8,
+            RISK_HIGH_MIN: 15,
+            // Attrition cost defaults
+            DEFAULT_MULTIPLIER: 1.5
+        };
+
+        // ================================================================
+        // DATA GENERATION - 100 Anonymized Employees
+        // ================================================================
+        
+        const departments = ['Engineering', 'Sales', 'Marketing', 'HR', 'Finance', 'Operations'];
+        const departmentHeads = {};
+        const employees = [];
+
+        // Generate department heads with potential high-risk status
+        departments.forEach(dept => {
+            departmentHeads[dept] = {
+                id: `HEAD-${dept.substring(0, 3).toUpperCase()}`,
+                salary: 100000 + Math.floor(Math.random() * 50000),
+                isHighRisk: Math.random() < 0.3 // 30% chance of being high risk
+            };
+        });
+
+        /**
+         * Generate 100 employees with comprehensive attributes
+         * Each employee gets performance, potential, salary, and risk scores
+         */
+        for (let i = 1; i <= 100; i++) {
+            const overtime = Math.floor(Math.random() * 35);
+            const engagement = Math.floor(Math.random() * 10) + 1;
+            const salaryGrowth = parseFloat((Math.random() * 5).toFixed(1));
+            const performance = Math.floor(Math.random() * 10) + 1;
+            const potential = Math.floor(Math.random() * 10) + 1;
+            const salary = 50000 + Math.floor(Math.random() * 80000);
+            
+            // Calculate risk score using burnout formula
+            // Higher overtime, lower engagement, lower salary growth = higher risk
+            const riskScore = (overtime * 0.5) + ((10 - engagement) * 0.3) + ((5 - salaryGrowth) * 0.2);
+            
+            // Determine risk level based on thresholds
+            let riskLevel = 'low';
+            if (riskScore >= CONFIG.RISK_HIGH_MIN) riskLevel = 'high';
+            else if (riskScore >= CONFIG.RISK_MEDIUM_MIN) riskLevel = 'medium';
+
+            // Auto-categorize into 9-box grid
+            const category = categorizeEmployee(performance, potential);
+
+            employees.push({
+                id: `EMP-${String(i).padStart(4, '0')}`,
+                department: departments[Math.floor(Math.random() * departments.length)],
+                overtime, engagement, salaryGrowth, performance, potential, salary,
+                riskScore: parseFloat(riskScore.toFixed(2)),
+                riskLevel,
+                category
+            });
+        }
+
+        // ================================================================
+        // 9-BOX GRID AUTO-CATEGORIZATION LOGIC
+        // ================================================================
+
+        /**
+         * Automatically categorize employee based on performance and potential scores
+         * Uses configurable thresholds for flexibility
+         * @param {number} performance - Performance score (1-10)
+         * @param {number} potential - Potential score (1-10)
+         * @returns {string} - 9-box category name
+         */
+        function categorizeEmployee(performance, potential) {
+            // Determine performance level
+            let perfLevel;
+            if (performance <= CONFIG.PERF_LOW_MAX) perfLevel = 'Low';
+            else if (performance <= CONFIG.PERF_MED_MAX) perfLevel = 'Medium';
+            else perfLevel = 'High';
+            
+            // Determine potential level
+            let potLevel;
+            if (potential <= CONFIG.POT_LOW_MAX) potLevel = 'Low';
+            else if (potential <= CONFIG.POT_MED_MAX) potLevel = 'Medium';
+            else potLevel = 'High';
+            
+            return `${perfLevel} Perf / ${potLevel} Potential`;
+        }
+
+        /**
+         * Get all unique 9-box categories with employee counts
+         * @returns {Object} - Category name to count mapping
+         */
+        function getCategoryCounts() {
+            const counts = {};
+            employees.forEach(emp => {
+                counts[emp.category] = (counts[emp.category] || 0) + 1;
+            });
+            return counts;
+        }
+
+        /**
+         * Get category color for visual representation
+         * @param {string} category - 9-box category name
+         * @returns {string} - Hex color code
+         */
+        function getCategoryColor(category) {
+            const colors = {
+                'High Perf / High Potential': '#10b981',
+                'High Perf / Medium Potential': '#3b82f6',
+                'High Perf / Low Potential': '#06b6d4',
+                'Medium Perf / High Potential': '#8b5cf6',
+                'Medium Perf / Medium Potential': '#64748b',
+                'Medium Perf / Low Potential': '#f59e0b',
+                'Low Perf / High Potential': '#6366f1',
+                'Low Perf / Medium Potential': '#f97316',
+                'Low Perf / Low Potential': '#ef4444'
+            };
+            return colors[category] || '#64748b';
+        }
+
+        // ================================================================
+        // NAVIGATION SYSTEM
+        // ================================================================
+
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.addEventListener('click', function() {
+                navigateTo(this.getAttribute('data-page'));
+            });
+        });
+
+        /**
+         * Navigate to a specific page/section
+         * @param {string} pageId - The ID of the page to navigate to
+         */
+        function navigateTo(pageId) {
+            // Update nav link states
+            document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+            document.querySelector(`[data-page="${pageId}"]`).classList.add('active');
+            
+            // Update page visibility
+            document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+            document.getElementById(pageId).classList.add('active');
+        }
+
+        // ================================================================
+        // OVERVIEW PAGE - KPIs & Charts
+        // ================================================================
+
+        /**
+         * Update all KPI cards on the overview page
+         */
+        function updateOverviewKPIs() {
+            const highRisk = employees.filter(e => e.riskLevel === 'high').length;
+            const topPerformers = employees.filter(e => e.performance >= 8);
+            const topAtRisk = topPerformers.filter(e => e.riskLevel !== 'low').length;
+            const totalRiskCost = employees
+                .filter(e => e.riskLevel === 'high')
+                .reduce((sum, e) => sum + (e.salary * CONFIG.DEFAULT_MULTIPLIER), 0);
+
+            // Update KPI values with animation effect
+            animateValue('kpiTotalEmployees', employees.length);
+            animateValue('kpiHighRisk', highRisk);
+            animateValue('kpiTopAtRisk', topAtRisk);
+            document.getElementById('kpiTotalRiskCost').textContent = formatCurrency(totalRiskCost);
+            document.getElementById('lastUpdated').textContent = new Date().toLocaleString();
+
+            // Generate strategic insight
+            let insight;
+            if (topAtRisk > 5) {
+                insight = `⚠️ Critical: ${topAtRisk} top performers showing risk indicators. ${highRisk} employees in high-risk category. Immediate retention strategies recommended.`;
+            } else if (highRisk > 15) {
+                insight = `📊 ${highRisk} employees flagged as high risk. ${topPerformers.length} top performers identified. Consider proactive engagement programs.`;
+            } else {
+                insight = `✅ Workforce health is stable. ${topPerformers.length} top performers identified with ${topAtRisk} showing minor risk signs.`;
+            }
+            document.getElementById('quickInsight').textContent = insight;
+        }
+
+        /**
+         * Animate a numeric value change
+         */
+        function animateValue(elementId, targetValue) {
+            const element = document.getElementById(elementId);
+            const duration = 500;
+            const startValue = parseInt(element.textContent) || 0;
+            const startTime = performance.now();
+            
+            function update(currentTime) {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const currentValue = Math.floor(startValue + (targetValue - startValue) * progress);
+                element.textContent = currentValue;
+                
+                if (progress < 1) {
+                    requestAnimationFrame(update);
+                }
+            }
+            
+            requestAnimationFrame(update);
+        }
+
+        /**
+         * Create overview page charts (Risk Distribution & Category Distribution)
+         */
+        function createOverviewCharts() {
+            // Risk Distribution Doughnut Chart
+            const riskCounts = {
+                low: employees.filter(e => e.riskLevel === 'low').length,
+                medium: employees.filter(e => e.riskLevel === 'medium').length,
+                high: employees.filter(e => e.riskLevel === 'high').length
+            };
+
+            new Chart(document.getElementById('overviewRiskChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['Low Risk', 'Medium Risk', 'High Risk'],
+                    datasets: [{
+                        data: [riskCounts.low, riskCounts.medium, riskCounts.high],
+                        backgroundColor: ['#10b981', '#f59e0b', '#ef4444'],
+                        borderWidth: 0,
+                        cutout: '65%'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { 
+                            position: 'bottom',
+                            labels: { padding: 20, usePointStyle: true, pointStyle: 'circle' }
+                        }
+                    }
+                }
+            });
+
+            // 9-Box Category Bar Chart
+            const categoryCounts = getCategoryCounts();
+            const sortedCategories = Object.entries(categoryCounts).sort((a, b) => b[1] - a[1]);
+
+            new Chart(document.getElementById('overviewCategoryChart'), {
+                type: 'bar',
+                data: {
+                    labels: sortedCategories.map(([cat]) => cat.split(' / ').join('\n')),
+                    datasets: [{
+                        data: sortedCategories.map(([, count]) => count),
+                        backgroundColor: sortedCategories.map(([cat]) => getCategoryColor(cat)),
+                        borderRadius: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } },
+                        x: { grid: { display: false }, ticks: { font: { size: 9 }, maxRotation: 0 } }
+                    }
+                }
+            });
+        }
+
+        // ================================================================
+        // 9-BOX GRID PAGE - Interactive Scatter Chart
+        // ================================================================
+
+        let nineBoxChartInstance = null;
+
+        /**
+         * Create the interactive 9-Box Grid scatter chart
+         */
+        function createNineBoxChart() {
+            const ctx = document.getElementById('nineBoxChart').getContext('2d');
+            
+            // Prepare datasets grouped by risk level with employee data attached
+            const datasets = [
+                {
+                    label: 'Low Risk',
+                    data: employees.filter(e => e.riskLevel === 'low').map(e => ({
+                        x: e.performance + (Math.random() - 0.5) * 0.3, // Slight jitter to avoid overlap
+                        y: e.potential + (Math.random() - 0.5) * 0.3,
+                        employee: e
+                    })),
+                    backgroundColor: 'rgba(16, 185, 129, 0.7)',
+                    borderColor: 'rgba(16, 185, 129, 1)',
+                    borderWidth: 1,
+                    pointRadius: 9,
+                    pointHoverRadius: 14
+                },
+                {
+                    label: 'Medium Risk',
+                    data: employees.filter(e => e.riskLevel === 'medium').map(e => ({
+                        x: e.performance + (Math.random() - 0.5) * 0.3,
+                        y: e.potential + (Math.random() - 0.5) * 0.3,
+                        employee: e
+                    })),
+                    backgroundColor: 'rgba(245, 158, 11, 0.7)',
+                    borderColor: 'rgba(245, 158, 11, 1)',
+                    borderWidth: 1,
+                    pointRadius: 9,
+                    pointHoverRadius: 14
+                },
+                {
+                    label: 'High Risk',
+                    data: employees.filter(e => e.riskLevel === 'high').map(e => ({
+                        x: e.performance + (Math.random() - 0.5) * 0.3,
+                        y: e.potential + (Math.random() - 0.5) * 0.3,
+                        employee: e
+                    })),
+                    backgroundColor: 'rgba(239, 68, 68, 0.7)',
+                    borderColor: 'rgba(239, 68, 68, 1)',
+                    borderWidth: 1,
+                    pointRadius: 9,
+                    pointHoverRadius: 14
+                }
+            ];
+
+            // Plugin: draw true 9-box dividers at category thresholds.
+            // This avoids relying on tick/grid positions, which typically won't include 3.5/7.5.
+            const nineBoxDividersPlugin = {
+                id: 'nineBoxDividers',
+                afterDraw(chart) {
+                    const { ctx, chartArea, scales } = chart;
+                    if (!chartArea || !scales || !scales.x || !scales.y) return;
+
+                    const dividerValues = [3.5, 7.5];
+
+                    ctx.save();
+                    ctx.strokeStyle = 'rgba(0,0,0,0.22)';
+                    ctx.lineWidth = 2;
+
+                    dividerValues.forEach(v => {
+                        const x = scales.x.getPixelForValue(v);
+                        ctx.beginPath();
+                        ctx.moveTo(x, chartArea.top);
+                        ctx.lineTo(x, chartArea.bottom);
+                        ctx.stroke();
+
+                        const y = scales.y.getPixelForValue(v);
+                        ctx.beginPath();
+                        ctx.moveTo(chartArea.left, y);
+                        ctx.lineTo(chartArea.right, y);
+                        ctx.stroke();
+                    });
+
+                    ctx.restore();
+                }
+            };
+
+            // Create chart with grid lines for 9-box divisions
+            nineBoxChartInstance = new Chart(ctx, {
+                type: 'scatter',
+                data: { datasets },
+                plugins: [nineBoxDividersPlugin],
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { 
+                            position: 'bottom',
+                            labels: { padding: 20, usePointStyle: true }
+                        },
+                        tooltip: {
+                            enabled: false,
+                            external: function(context) {
+                                showCustomTooltip(context);
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: { display: true, text: 'Performance Score (1-10)', font: { weight: 'bold', size: 12 } },
+                            min: 0, max: 11,
+                            grid: { 
+                                color: function(context) {
+                                    // Highlight 9-box grid lines
+                                    if (context.tick.value === 3.5 || context.tick.value === 7.5) {
+                                        return 'rgba(0,0,0,0.2)';
+                                    }
+                                    return 'rgba(0,0,0,0.05)';
+                                },
+                                lineWidth: function(context) {
+                                    if (context.tick.value === 3.5 || context.tick.value === 7.5) {
+                                        return 2;
+                                    }
+                                    return 1;
+                                }
+                            }
+                        },
+                        y: {
+                            title: { display: true, text: 'Potential Score (1-10)', font: { weight: 'bold', size: 12 } },
+                            min: 0, max: 11,
+                            grid: { 
+                                color: function(context) {
+                                    if (context.tick.value === 3.5 || context.tick.value === 7.5) {
+                                        return 'rgba(0,0,0,0.2)';
+                                    }
+                                    return 'rgba(0,0,0,0.05)';
+                                },
+                                lineWidth: function(context) {
+                                    if (context.tick.value === 3.5 || context.tick.value === 7.5) {
+                                        return 2;
+                                    }
+                                    return 1;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        /**
+         * Display custom tooltip on chart hover
+         * Shows Employee ID, Department, Risk Score, and 9-Box Category
+         */
+        function showCustomTooltip(context) {
+            const tooltip = document.getElementById('chartTooltip');
+            
+            if (context.tooltip.opacity === 0) {
+                tooltip.classList.add('hidden');
+                return;
+            }
+
+            const dataPoint = context.tooltip.dataPoints[0];
+            if (!dataPoint || !dataPoint.raw.employee) return;
+
+            const emp = dataPoint.raw.employee;
+            const riskColors = {
+                high: { bg: '#fee2e2', border: '#ef4444', text: '#dc2626' },
+                medium: { bg: '#fef3c7', border: '#f59e0b', text: '#d97706' },
+                low: { bg: '#d1fae5', border: '#10b981', text: '#059669' }
+            };
+            const colors = riskColors[emp.riskLevel];
+
+            tooltip.innerHTML = `
+                <div class="flex items-center justify-between mb-3 pb-2 border-b border-slate-200">
+                    <span class="font-bold text-slate-900">${emp.id}</span>
+                    <span class="px-2 py-0.5 rounded text-xs font-semibold" style="background: ${colors.bg}; color: ${colors.text}; border: 1px solid ${colors.border}">
+                        ${emp.riskLevel.toUpperCase()} RISK
+                    </span>
+                </div>
+                <div class="space-y-2 text-slate-600">
+                    <div class="flex justify-between">
+                        <span class="text-slate-400">Department:</span>
+                        <span class="font-medium">${emp.department}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-slate-400">Performance:</span>
+                        <span class="font-medium">${emp.performance}/10</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-slate-400">Potential:</span>
+                        <span class="font-medium">${emp.potential}/10</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-slate-400">Risk Score:</span>
+                        <span class="font-medium">${emp.riskScore}</span>
+                    </div>
+                </div>
+                <div class="mt-3 pt-2 border-t border-slate-200">
+                    <span class="text-xs text-slate-400">Category:</span>
+                    <p class="font-medium text-slate-700 text-sm">${emp.category}</p>
+                </div>
+            `;
+
+            tooltip.classList.remove('hidden');
+            
+            // Position tooltip near the data point
+            const chartArea = context.chart.chartArea;
+            const x = context.tooltip.caretX;
+            const y = context.tooltip.caretY;
+            
+            // Adjust position to stay within view
+            tooltip.style.left = (x + 20) + 'px';
+            tooltip.style.top = (y - 20) + 'px';
+        }
+
+        /**
+         * Populate the category breakdown sidebar
+         */
+        function populateCategoryBreakdown() {
+            const counts = getCategoryCounts();
+            const container = document.getElementById('categoryBreakdown');
+            
+            const sortedCategories = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+            
+            container.innerHTML = sortedCategories.map(([cat, count]) => `
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <span class="w-3 h-3 rounded-full" style="background: ${getCategoryColor(cat)}"></span>
+                        <span class="text-slate-600 text-xs truncate max-w-[140px]">${cat}</span>
+                    </div>
+                    <span class="font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded text-xs">${count}</span>
+                </div>
+            `).join('');
+        }
+
+        /**
+         * Create horizontal bar chart showing high-risk count by category
+         */
+        function createCategoryRiskChart() {
+            const categories = [...new Set(employees.map(e => e.category))];
+
+            // Build category → high-risk count mapping, then filter out zero-count categories
+            const sortedData = categories
+                .map(cat => ({
+                    cat,
+                    count: employees.filter(e => e.category === cat && e.riskLevel === 'high').length
+                }))
+                .filter(d => d.count > 0)
+                .sort((a, b) => b.count - a.count)
+                .slice(0, 6); // Top 6
+
+            new Chart(document.getElementById('categoryRiskChart'), {
+                type: 'bar',
+                data: {
+                    labels: sortedData.map(d => d.cat),
+                    datasets: [{
+                        label: 'High Risk Count',
+                        data: sortedData.map(d => d.count),
+                        backgroundColor: '#ef4444',
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    indexAxis: 'y',
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } },
+                        y: { grid: { display: false }, ticks: { font: { size: 10 } } }
+                    }
+                }
+            });
+        }
+
+        // ================================================================
+        // ATTRITION COST CALCULATOR (CFO VIEW)
+        // ================================================================
+
+        // Update slider value displays
+        document.getElementById('calcMultiplier').addEventListener('input', function() {
+            document.getElementById('multiplierValue').textContent = this.value + 'x';
+        });
+
+        document.getElementById('calcLossMonths').addEventListener('input', function() {
+            document.getElementById('lossMonthsValue').textContent = this.value + ' months';
+        });
+
+        /**
+         * Calculate attrition cost based on user inputs
+         * Formula: Total = (Salary × Multiplier) + (Monthly Salary × Loss Months)
+         */
+        function calculateAttritionCost() {
+            const salary = parseFloat(document.getElementById('calcSalary').value) || 75000;
+            const multiplier = parseFloat(document.getElementById('calcMultiplier').value) || 1.5;
+            const lossMonths = parseFloat(document.getElementById('calcLossMonths').value) || 3;
+
+            // Calculate components
+            const replacementCost = salary * multiplier;
+            const monthlyProductivity = salary / 12;
+            const productivityLoss = monthlyProductivity * lossMonths;
+            const totalCost = replacementCost + productivityLoss;
+
+            // Update display with animation
+            document.getElementById('resultReplacementCost').textContent = formatCurrency(replacementCost);
+            document.getElementById('resultProductivityLoss').textContent = formatCurrency(productivityLoss);
+            document.getElementById('resultTotalCost').textContent = formatCurrency(totalCost);
+        }
+
+        /**
+         * Populate department cost analysis table
+         */
+        function populateDeptCostTable() {
+            const deptData = departments.map(dept => {
+                const deptEmps = employees.filter(e => e.department === dept);
+                const highRiskEmps = deptEmps.filter(e => e.riskLevel === 'high');
+                const avgSalary = deptEmps.length > 0 
+                    ? deptEmps.reduce((sum, e) => sum + e.salary, 0) / deptEmps.length 
+                    : 0;
+                const potentialCost = highRiskEmps.reduce((sum, e) => sum + (e.salary * CONFIG.DEFAULT_MULTIPLIER), 0);
+                const headAtRisk = departmentHeads[dept].isHighRisk;
+
+                return { dept, highRiskCount: highRiskEmps.length, avgSalary, potentialCost, headAtRisk };
+            });
+
+            // Sort by potential cost (highest first)
+            deptData.sort((a, b) => b.potentialCost - a.potentialCost);
+
+            const tbody = document.getElementById('deptCostTable');
+            tbody.innerHTML = deptData.map(d => `
+                <tr class="${d.headAtRisk ? 'bg-red-50' : ''}">
+                    <td class="px-6 py-4 font-medium text-slate-900 border-b border-slate-100">
+                        <div class="flex items-center gap-2">
+                            ${d.headAtRisk ? '<span class="w-2 h-2 rounded-full bg-risk-high animate-pulse"></span>' : ''}
+                            ${d.dept}
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 text-slate-600 border-b border-slate-100">
+                        <span class="px-2 py-1 rounded ${d.highRiskCount > 3 ? 'bg-red-100 text-risk-high' : 'bg-slate-100 text-slate-700'} font-medium">
+                            ${d.highRiskCount}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 text-slate-600 border-b border-slate-100">${formatCurrency(d.avgSalary)}</td>
+                    <td class="px-6 py-4 font-semibold text-slate-900 border-b border-slate-100">${formatCurrency(d.potentialCost)}</td>
+                    <td class="px-6 py-4 border-b border-slate-100">
+                        ${d.headAtRisk 
+                            ? '<span class="inline-flex items-center gap-1 text-risk-high font-semibold"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg> YES</span>'
+                            : '<span class="text-risk-low font-medium">No</span>'}
+                    </td>
+                </tr>
+            `).join('');
+
+            // Update department head alert
+            const highRiskHead = departments.find(d => departmentHeads[d].isHighRisk);
+            if (highRiskHead) {
+                const headCost = departmentHeads[highRiskHead].salary * CONFIG.DEFAULT_MULTIPLIER;
+                document.getElementById('deptHeadAlertText').innerHTML = 
+                    `If the <strong>${highRiskHead}</strong> Department Head resigns, estimated financial impact: <strong>${formatCurrency(headCost)}</strong>`;
+                document.getElementById('deptHeadAlert').classList.remove('hidden');
+            } else {
+                document.getElementById('deptHeadAlert').classList.add('hidden');
+            }
+        }
+
+        // ================================================================
+        // RETENTION PRIORITY LIST (80/20 RULE)
+        // ================================================================
+
+        /**
+         * Generate retention priority list using 80/20 rule
+         * Logic: Top 20% performers with Medium or High risk
+         * Sorted by: Risk level (high first), then Performance (highest first)
+         */
+        function generateRetentionPriority() {
+            // Step 1: Sort all employees by performance (descending)
+            const sortedByPerf = [...employees].sort((a, b) => b.performance - a.performance);
+            
+            // Step 2: Get top 20% performers
+            const top20PercentCount = Math.ceil(employees.length * 0.2);
+            const top20Percent = sortedByPerf.slice(0, top20PercentCount);
+            
+            // Step 3: Filter to those with Medium or High risk
+            const atRiskTopPerformers = top20Percent.filter(e => e.riskLevel !== 'low');
+            
+            // Step 4: Sort by priority (High Risk + High Performance first)
+            const prioritized = atRiskTopPerformers.sort((a, b) => {
+                // First by risk level (high > medium > low)
+                const riskOrder = { high: 3, medium: 2, low: 1 };
+                const riskDiff = riskOrder[b.riskLevel] - riskOrder[a.riskLevel];
+                if (riskDiff !== 0) return riskDiff;
+                
+                // Then by performance (higher first)
+                return b.performance - a.performance;
+            });
+
+            return prioritized;
+        }
+
+        /**
+         * Populate retention priority table and summary statistics
+         */
+        function populateRetentionTable() {
+            const priorityList = generateRetentionPriority();
+            
+            // Update summary cards
+            document.getElementById('priorityCount').textContent = priorityList.length;
+            
+            const valueAtRisk = priorityList.reduce((sum, e) => sum + (e.salary * CONFIG.DEFAULT_MULTIPLIER), 0);
+            document.getElementById('priorityValueAtRisk').textContent = formatCurrency(valueAtRisk);
+            
+            const avgPerf = priorityList.length > 0 
+                ? (priorityList.reduce((sum, e) => sum + e.performance, 0) / priorityList.length).toFixed(1)
+                : '0';
+            document.getElementById('priorityAvgPerf').textContent = avgPerf + '/10';
+
+            // Populate table
+            const tbody = document.getElementById('retentionTable');
+            tbody.innerHTML = priorityList.map((emp, index) => {
+                const riskBadge = emp.riskLevel === 'high' 
+                    ? '<span class="px-3 py-1 bg-red-100 text-risk-high text-xs font-semibold rounded-full">HIGH</span>'
+                    : '<span class="px-3 py-1 bg-amber-100 text-risk-medium text-xs font-semibold rounded-full">MEDIUM</span>';
+
+                const priorityClass = index < 3 ? 'bg-risk-high text-white' : 'bg-slate-200 text-slate-700';
+
+                return `
+                    <tr class="animate-slide-in" style="animation-delay: ${index * 30}ms">
+                        <td class="px-6 py-4 border-b border-slate-100">
+                            <span class="priority-badge ${priorityClass}">
+                                ${index + 1}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 font-semibold text-slate-900 border-b border-slate-100">${emp.id}</td>
+                        <td class="px-6 py-4 text-slate-600 border-b border-slate-100">${emp.department}</td>
+                        <td class="px-6 py-4 border-b border-slate-100">
+                            <div class="flex items-center gap-3">
+                                <div class="w-20 h-2 bg-slate-200 rounded-full overflow-hidden">
+                                    <div class="h-full bg-accent rounded-full" style="width: ${emp.performance * 10}%"></div>
+                                </div>
+                                <span class="font-semibold text-slate-900">${emp.performance}</span>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 border-b border-slate-100">
+                            <div class="flex items-center gap-3">
+                                <div class="w-20 h-2 bg-slate-200 rounded-full overflow-hidden">
+                                    <div class="h-full bg-purple-500 rounded-full" style="width: ${emp.potential * 10}%"></div>
+                                </div>
+                                <span class="font-semibold text-slate-900">${emp.potential}</span>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 border-b border-slate-100">${riskBadge}</td>
+                        <td class="px-6 py-4 text-slate-500 border-b border-slate-100 text-xs">${emp.category}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // ================================================================
+        // UTILITY FUNCTIONS
+        // ================================================================
+
+        /**
+         * Format number as currency (USD)
+         * @param {number} amount - The amount to format
+         * @returns {string} - Formatted currency string
+         */
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'USD',
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            }).format(amount);
+        }
+
+        /**
+         * Refresh all dashboard data
+         */
+        function refreshDashboard() {
+            updateOverviewKPIs();
+            document.getElementById('lastUpdated').textContent = new Date().toLocaleString();
+        }
+
+        // ================================================================
+        // INITIALIZATION - Run when page loads
+        // ================================================================
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize Overview Page
+            updateOverviewKPIs();
+            createOverviewCharts();
+
+            // Initialize 9-Box Grid Page
+            createNineBoxChart();
+            populateCategoryBreakdown();
+            createCategoryRiskChart();
+
+            // Initialize Attrition Cost Page
+            calculateAttritionCost();
+            populateDeptCostTable();
+
+            // Initialize Retention Priority Page
+            populateRetentionTable();
+
+            // Initialize Action Hub Page
+            initializeActionHub();
+            
+            console.log('✅ Datanova initialized successfully');
+        });
+
+        // ================================================================
+        // ACTION HUB - AGENTIC AI RETENTION SYSTEM
+        // ================================================================
+
+        // Workflow state management
+        const WORKFLOW_STATES = {
+            PENDING: 'pending',
+            INTERVENTION_SENT: 'intervention_sent',
+            RETAINED: 'retained'
+        };
+
+        // Store workflow statuses for each employee
+        const workflowStatuses = {};
+        let selectedStrategies = new Set();
+        let currentModalEmployee = null;
+
+        /**
+         * Get priority employees for Action Hub (High Risk + High Performers)
+         * Performance > 7 (top performers) AND riskLevel = 'high'
+         */
+        function getActionHubEmployees() {
+            return employees
+                .filter(emp => emp.riskLevel === 'high' && emp.performance > 7)
+                .sort((a, b) => b.riskScore - a.riskScore);
+        }
+
+        /**
+         * Initialize Action Hub state and UI
+         */
+        function initializeActionHub() {
+            const priorityEmps = getActionHubEmployees();
+            
+            // Initialize all employees with 'pending' status
+            priorityEmps.forEach(emp => {
+                workflowStatuses[emp.id] = WORKFLOW_STATES.PENDING;
+            });
+
+            // Render the table and update stats
+            renderActionHubTable();
+            updateActionHubStats();
+            document.getElementById('ahLastSync').textContent = new Date().toLocaleTimeString();
+        }
+
+        /**
+         * Update Action Hub summary statistics
+         */
+        function updateActionHubStats() {
+            const priorityEmps = getActionHubEmployees();
+            
+            // Count statuses
+            let pending = 0, inProgress = 0, retained = 0;
+            priorityEmps.forEach(emp => {
+                const status = workflowStatuses[emp.id] || WORKFLOW_STATES.PENDING;
+                if (status === WORKFLOW_STATES.PENDING) pending++;
+                else if (status === WORKFLOW_STATES.INTERVENTION_SENT) inProgress++;
+                else if (status === WORKFLOW_STATES.RETAINED) retained++;
+            });
+
+            // Calculate total risk value
+            const totalRiskValue = priorityEmps.reduce((sum, emp) => sum + (emp.salary * CONFIG.DEFAULT_MULTIPLIER), 0);
+
+            // Update UI
+            document.getElementById('ahPriorityCount').textContent = priorityEmps.length;
+            document.getElementById('ahPendingCount').textContent = pending;
+            document.getElementById('ahInProgressCount').textContent = inProgress;
+            document.getElementById('ahRetainedCount').textContent = retained;
+            document.getElementById('ahTotalRiskValue').textContent = formatCurrency(totalRiskValue);
+        }
+
+        /**
+         * Render the Action Hub data table
+         */
+        function renderActionHubTable() {
+            const priorityEmps = getActionHubEmployees();
+            const tbody = document.getElementById('actionHubTable');
+
+            tbody.innerHTML = priorityEmps.map((emp, index) => {
+                const status = workflowStatuses[emp.id] || WORKFLOW_STATES.PENDING;
+                const replacementCost = emp.salary * CONFIG.DEFAULT_MULTIPLIER;
+                const riskPercent = Math.min(Math.round((emp.riskScore / 20) * 100), 100);
+
+                // Generate risk profile tags
+                const riskTags = [];
+                if (emp.overtime > 20) {
+                    riskTags.push(`<span class="inline-flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-800 rounded-md text-xs font-medium">⏰ High Overtime</span>`);
+                }
+                if (emp.engagement < 5) {
+                    riskTags.push(`<span class="inline-flex items-center gap-1 px-2 py-1 bg-orange-100 text-orange-800 rounded-md text-xs font-medium">📉 Low Engagement</span>`);
+                }
+                if (emp.salaryGrowth < 2) {
+                    riskTags.push(`<span class="inline-flex items-center gap-1 px-2 py-1 bg-red-100 text-red-800 rounded-md text-xs font-medium">💰 Salary Gap</span>`);
+                }
+
+                // Workflow status badge
+                let statusBadge;
+                if (status === WORKFLOW_STATES.PENDING) {
+                    statusBadge = `<span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                        Pending Review
+                    </span>`;
+                } else if (status === WORKFLOW_STATES.INTERVENTION_SENT) {
+                    statusBadge = `<span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-700 border border-blue-200">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+                        Intervention Sent
+                    </span>`;
+                } else {
+                    statusBadge = `<span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700 border border-emerald-200">
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                        Retained
+                    </span>`;
+                }
+
+                // Action button based on status
+                let actionButton;
+                if (status === WORKFLOW_STATES.RETAINED) {
+                    actionButton = `<button disabled class="inline-flex items-center gap-2 px-4 py-2 bg-emerald-100 text-emerald-700 rounded-lg text-sm font-medium cursor-not-allowed">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+                        Secured
+                    </button>`;
+                } else if (status === WORKFLOW_STATES.INTERVENTION_SENT) {
+                    actionButton = `<div class="flex items-center gap-2">
+                        <button onclick="viewPlan('${emp.id}')" class="inline-flex items-center gap-2 px-4 py-2 bg-white border-2 border-blue-600 text-blue-600 rounded-lg text-sm font-semibold hover:bg-blue-50 transition">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/></svg>
+                            View Plan
+                        </button>
+                        <button onclick="markRetained('${emp.id}')" class="inline-flex items-center gap-1 px-3 py-2 bg-emerald-500 text-white rounded-lg text-sm font-medium hover:bg-emerald-600 transition" title="Mark as Retained">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                        </button>
+                    </div>`;
+                } else {
+                    actionButton = `<button onclick="openAgentModal('${emp.id}')" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition shadow-lg shadow-blue-500/25">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                        Activate AI Agent
+                    </button>`;
+                }
+
+                return `
+                    <tr class="hover:bg-slate-50 transition-colors animate-slide-in" style="animation-delay: ${index * 30}ms">
+                        <td class="px-6 py-5 border-b border-slate-100">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center">
+                                    <svg class="w-5 h-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <p class="font-semibold text-slate-900">${emp.id}</p>
+                                    <p class="text-xs text-slate-500">${emp.department}</p>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-5 border-b border-slate-100">
+                            <div class="flex flex-wrap gap-1.5">
+                                ${riskTags.length > 0 ? riskTags.join('') : '<span class="text-slate-400 text-xs">No critical flags</span>'}
+                            </div>
+                        </td>
+                        <td class="px-6 py-5 border-b border-slate-100">
+                            <div class="flex items-center gap-2">
+                                <div class="w-16 h-2 bg-slate-200 rounded-full overflow-hidden">
+                                    <div class="h-full bg-red-500 rounded-full" style="width: ${riskPercent}%"></div>
+                                </div>
+                                <span class="font-bold text-sm text-red-600">${riskPercent}%</span>
+                            </div>
+                        </td>
+                        <td class="px-6 py-5 border-b border-slate-100">
+                            <div class="flex items-center gap-2">
+                                <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                                <span class="font-semibold text-slate-900">${formatCurrency(replacementCost)}</span>
+                            </div>
+                            <p class="text-xs text-slate-500 mt-0.5">Replacement cost</p>
+                        </td>
+                        <td class="px-6 py-5 border-b border-slate-100">${statusBadge}</td>
+                        <td class="px-6 py-5 border-b border-slate-100">${actionButton}</td>
+                        <td class="px-6 py-5 border-b border-slate-100 text-center">
+                            <button onclick="openCollaboration('${emp.id}')" class="w-10 h-10 rounded-lg bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition mx-auto group" title="Open collaboration channel">
+                                <svg class="w-5 h-5 text-slate-500 group-hover:text-blue-600 transition" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+                                </svg>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        /**
+         * Open the AI Agent modal for a specific employee
+         */
+        function openAgentModal(empId) {
+            const emp = employees.find(e => e.id === empId);
+            if (!emp) return;
+
+            currentModalEmployee = emp;
+            selectedStrategies.clear();
+            updateStrategyUI();
+
+            // Populate modal with employee data
+            document.getElementById('modalEmployeeId').textContent = `Personalized intervention for ${emp.id}`;
+            document.getElementById('modalRiskScore').textContent = `${Math.min(Math.round((emp.riskScore / 20) * 100), 100)}%`;
+            document.getElementById('modalPerformance').textContent = `${emp.performance}/10`;
+            document.getElementById('modalDepartment').textContent = emp.department;
+            document.getElementById('modalOvertime').textContent = `${emp.overtime} hrs/week`;
+
+            // Show modal
+            const modal = document.getElementById('aiAgentModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        /**
+         * Close the AI Agent modal
+         */
+        function closeAgentModal() {
+            const modal = document.getElementById('aiAgentModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+            currentModalEmployee = null;
+            selectedStrategies.clear();
+            updateStrategyUI();
+        }
+
+        /**
+         * Toggle a strategy selection
+         */
+        function toggleStrategy(strategyId) {
+            if (selectedStrategies.has(strategyId)) {
+                selectedStrategies.delete(strategyId);
+            } else {
+                selectedStrategies.add(strategyId);
+            }
+            updateStrategyUI();
+        }
+
+        /**
+         * Update the strategy selection UI
+         */
+        function updateStrategyUI() {
+            const buttons = document.querySelectorAll('.strategy-btn');
+            buttons.forEach(btn => {
+                const strategy = btn.getAttribute('data-strategy');
+                const icon = btn.querySelector('.strategy-icon');
+                const label = btn.querySelector('.strategy-label');
+
+                if (selectedStrategies.has(strategy)) {
+                    btn.classList.remove('border-slate-200');
+                    btn.classList.add('border-blue-600', 'bg-blue-50');
+                    icon.classList.remove('bg-slate-100', 'text-slate-600');
+                    icon.classList.add('bg-blue-600', 'text-white');
+                    label.classList.remove('text-slate-700');
+                    label.classList.add('text-blue-600');
+                } else {
+                    btn.classList.add('border-slate-200');
+                    btn.classList.remove('border-blue-600', 'bg-blue-50');
+                    icon.classList.add('bg-slate-100', 'text-slate-600');
+                    icon.classList.remove('bg-blue-600', 'text-white');
+                    label.classList.add('text-slate-700');
+                    label.classList.remove('text-blue-600');
+                }
+            });
+
+            // Update selection summary
+            const summary = document.getElementById('selectionSummary');
+            const countEl = document.getElementById('selectedCount');
+            const activateBtn = document.getElementById('activateAgentBtn');
+
+            if (selectedStrategies.size > 0) {
+                summary.classList.remove('hidden');
+                countEl.textContent = selectedStrategies.size;
+                activateBtn.disabled = false;
+                activateBtn.classList.remove('bg-slate-200', 'text-slate-400', 'cursor-not-allowed');
+                activateBtn.classList.add('bg-blue-600', 'text-white', 'hover:bg-blue-700', 'shadow-lg', 'shadow-blue-500/25');
+            } else {
+                summary.classList.add('hidden');
+                activateBtn.disabled = true;
+                activateBtn.classList.add('bg-slate-200', 'text-slate-400', 'cursor-not-allowed');
+                activateBtn.classList.remove('bg-blue-600', 'text-white', 'hover:bg-blue-700', 'shadow-lg', 'shadow-blue-500/25');
+            }
+        }
+
+        /**
+         * Activate the AI Agent (with 1.5s simulated delay)
+         */
+        async function activateAgent() {
+            if (!currentModalEmployee || selectedStrategies.size === 0) return;
+
+            const btn = document.getElementById('activateAgentBtn');
+            const originalContent = btn.innerHTML;
+
+            // Show processing state
+            btn.disabled = true;
+            btn.innerHTML = `
+                <div class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                Processing...
+            `;
+
+            // Simulate 1.5 second API call
+            await new Promise(resolve => setTimeout(resolve, 1500));
+
+            // Update workflow status
+            workflowStatuses[currentModalEmployee.id] = WORKFLOW_STATES.INTERVENTION_SENT;
+
+            // Log the activation
+            console.log(`[AI Agent Activated] Employee: ${currentModalEmployee.id}`, {
+                strategies: Array.from(selectedStrategies),
+                timestamp: new Date().toISOString(),
+                riskScore: currentModalEmployee.riskScore,
+                estimatedRetentionIncrease: '+34%'
+            });
+
+            // Close modal and refresh UI
+            closeAgentModal();
+            renderActionHubTable();
+            updateActionHubStats();
+            document.getElementById('ahLastSync').textContent = new Date().toLocaleTimeString();
+        }
+
+        /**
+         * View retention plan for an employee
+         */
+        function viewPlan(empId) {
+            console.log(`[View Retention Plan] Employee: ${empId}`, {
+                timestamp: new Date().toISOString()
+            });
+            alert(`Opening retention plan for ${empId}...\n\nThis would display the AI-generated retention plan with:\n- Recommended salary adjustment\n- Workload optimization suggestions\n- Manager touchpoint schedule\n- Progress tracking metrics`);
+        }
+
+        /**
+         * Mark an employee as retained
+         */
+        function markRetained(empId) {
+            workflowStatuses[empId] = WORKFLOW_STATES.RETAINED;
+            console.log(`[Employee Retained] ${empId}`, {
+                timestamp: new Date().toISOString()
+            });
+            renderActionHubTable();
+            updateActionHubStats();
+        }
+
+        /**
+         * Open collaboration channel for an employee
+         */
+        function openCollaboration(empId) {
+            const emp = employees.find(e => e.id === empId);
+            console.log('Opening collaboration channel...', {
+                employeeId: empId,
+                department: emp ? emp.department : 'Unknown',
+                timestamp: new Date().toISOString()
+            });
+            // In production, this would open a secure chat interface
+        }
+    </script>
+</body>
+</html>
